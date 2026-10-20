@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Engineer Action Tracker</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Inter & Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fffbeb',
+              100: '#fef3c7',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+            },
+            industry: {
+              800: '#1e293b',
+              900: '#0f172a',
+              950: '#020617',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, textarea, select {
+      user-select: auto;
+    }
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    /* Pulse ring for active recording */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 0.3; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .pulsing {
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-slate-950">
+
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between shadow-lg">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-amber-500/20">
+        <i data-lucide="wrench" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+          ENG-TRACKER
+          <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">PRO</span>
+        </h1>
+        <p class="text-[10px] text-slate-400 font-mono" id="current-engineer-tag">ENG: Anon Engineer</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Sync Status Indicator -->
+      <button onclick="switchTab('settings')" id="sync-status-badge" class="flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-medium bg-slate-800/80 border border-slate-700 text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-slate-400" id="sync-dot"></span>
+        <span id="sync-text">Local</span>
+      </button>
+      <button onclick="triggerQuickSync()" title="Sync Now" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 active:scale-95 transition">
+        <i data-lucide="refresh-cw" class="w-4 h-4" id="sync-icon-rotate"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 overflow-y-auto custom-scrollbar p-4 max-w-md mx-auto w-full pb-28">
+
+    <!-- TAB 1: DASHBOARD -->
+    <section id="tab-dashboard" class="space-y-4">
+      <!-- Summary Cards Grid -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 relative overflow-hidden">
+          <div class="text-slate-400 text-xs font-medium flex items-center justify-between mb-1">
+            <span>ชั่วโมงการทำงาน</span>
+            <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+          </div>
+          <div class="text-2xl font-bold font-mono text-white tracking-tight" id="dash-manhours">0.0 <span class="text-xs text-slate-400 font-normal">hrs</span></div>
+          <div class="text-[10px] text-emerald-400 mt-1 flex items-center gap-1">
+            <i data-lucide="trending-up" class="w-3 h-3"></i> รวมวันนี้
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 relative overflow-hidden">
+          <div class="text-slate-400 text-xs font-medium flex items-center justify-between mb-1">
+            <span>งานในรายการทั้งหมด</span>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <div class="text-2xl font-bold font-mono text-white tracking-tight" id="dash-total-tasks">0</div>
+          <div class="text-[10px] text-slate-400 mt-1">
+            รอดำเนินการ: <span class="text-amber-400 font-medium" id="dash-pending-tasks">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Timer Widget -->
+      <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 border border-amber-500/30 rounded-2xl p-4 relative shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-500" id="timer-indicator"></span>
+            <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Live Work Timer</span>
+          </div>
+          <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-amber-400 font-mono truncate max-w-[140px]" id="timer-active-machine">No Task Active</span>
+        </div>
+        <div class="text-center my-3">
+          <div class="font-mono text-4xl font-extrabold tracking-wider text-white drop-shadow" id="timer-display">00:00:00</div>
+          <p class="text-xs text-slate-400 mt-1" id="timer-note">กดเริ่มเพื่อจับเวลาการปฏิบัติงาน</p>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-3">
+          <button id="btn-timer-toggle" onclick="toggleTimer()" class="py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow">
+            <i data-lucide="play" class="w-4 h-4 fill-slate-950"></i> <span id="timer-btn-text">เริ่มจับเวลา</span>
+          </button>
+          <button onclick="resetTimer()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 font-medium text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> รีเซ็ต
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Action Shortcuts -->
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="openNewTaskForm('Emergency')" class="p-2.5 rounded-xl bg-red-950/40 border border-red-800/50 text-red-300 text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i> แจ้งเหตุฉุกเฉิน
+        </button>
+        <button onclick="openNewTaskForm('Preventive')" class="p-2.5 rounded-xl bg-blue-950/40 border border-blue-800/50 text-blue-300 text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition">
+          <i data-lucide="shield-check" class="w-4 h-4 text-blue-400"></i> สั่งงานตรวจ PM
+        </button>
+      </div>
+
+      <!-- Assigned / Pending Task Queue for Engineer -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between pt-1">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="inbox" class="w-3.5 h-3.5 text-amber-400"></i> งานที่รอดำเนินการ (Action Queue)
+          </h2>
+          <button onclick="switchTab('tasks')" class="text-xs text-amber-400 hover:underline">ดูรายการทั้งหมด</button>
+        </div>
+
+        <div id="dash-action-queue" class="space-y-2.5">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: TASKS / DISPATCH LIST -->
+    <section id="tab-tasks" class="hidden space-y-3.5">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <i data-lucide="list-todo" class="w-4 h-4 text-amber-400"></i>
+            รายการงานที่มอบหมาย / แจ้งซ่อม
+          </h2>
+          <p class="text-[11px] text-slate-400">แตะที่การ์ดเพื่อดูรายละเอียด อัปเดตสถานะ หรือเริ่มงาน</p>
+        </div>
+        <button onclick="openNewTaskForm()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1 active:scale-95 transition shadow">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> มอบหมายงาน
+        </button>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="space-y-2">
+        <div class="relative">
+          <input type="text" id="search-tasks" oninput="renderTaskList()" placeholder="ค้นหารหัสเครื่อง, ผู้รับผิดชอบ, อาการ..." 
+            class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-2.5"></i>
+        </div>
+        <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
+          <button onclick="setTaskFilter('ALL')" class="task-filter-btn px-3 py-1 rounded-lg bg-amber-500 text-slate-950 font-semibold text-[11px] whitespace-nowrap" data-filter="ALL">ทั้งหมด</button>
+          <button onclick="setTaskFilter('MY')" class="task-filter-btn px-3 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] whitespace-nowrap" data-filter="MY">งานของฉัน</button>
+          <button onclick="setTaskFilter('Pending')" class="task-filter-btn px-3 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] whitespace-nowrap" data-filter="Pending">รอดำเนินการ</button>
+          <button onclick="setTaskFilter('In Progress')" class="task-filter-btn px-3 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] whitespace-nowrap" data-filter="In Progress">กำลังทำ</button>
+          <button onclick="setTaskFilter('Completed')" class="task-filter-btn px-3 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] whitespace-nowrap" data-filter="Completed">เสร็จสิ้น</button>
+        </div>
+      </div>
+
+      <!-- Task Cards Container -->
+      <div id="task-items-container" class="space-y-2.5">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- TAB 3: CREATE / DISPATCH TASK FORM -->
+    <section id="tab-new" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <h2 class="text-base font-bold text-white mb-1 flex items-center gap-2">
+          <i data-lucide="clipboard-pen" class="w-5 h-5 text-amber-400"></i>
+          เพิ่มงานในรายการ (Dispatch / New Task)
+        </h2>
+        <p class="text-xs text-slate-400 mb-3.5">ผู้แจ้ง/หัวหน้างานสามารถใส่งานเข้าคิวเพื่อให้ Engineer มารับไปทำต่อได้</p>
+
+        <form id="action-form" onsubmit="handleFormSubmit(event)" class="space-y-3.5">
+          <!-- Machine / Asset Identification -->
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">รหัสเครื่องจักร / Asset ID <span class="text-amber-400">*</span></label>
+            <div class="relative">
+              <input type="text" id="form-asset" required placeholder="เช่น CNC-04, BOILER-A, ROBOT-ARM" 
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono uppercase">
+              <button type="button" onclick="openQrScannerMock()" class="absolute right-2 top-2 p-1.5 rounded-lg text-slate-400 hover:text-amber-400">
+                <i data-lucide="qr-code" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Location & Category Row -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">พื้นที่ / Area <span class="text-amber-400">*</span></label>
+              <input type="text" id="form-area" required placeholder="เช่น Line 1, Utility" 
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">หมวดหมู่งาน</label>
+              <select id="form-category" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+                <option value="Preventive">Preventive (PM)</option>
+                <option value="Corrective" selected>Corrective (CM)</option>
+                <option value="Inspection">Inspection (ตรวจเช็ค)</option>
+                <option value="Calibration">Calibration</option>
+                <option value="Emergency">Emergency (ฉุกเฉิน)</option>
+                <option value="Modification">Modification</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Assignee & Requester -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">ผู้แจ้งงาน / Requester</label>
+              <input type="text" id="form-requester" placeholder="เช่น หน.กะ A, ฝ่ายผลิต"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">มอบหมายวิศวกร (Engineer)</label>
+              <input type="text" id="form-engineer" placeholder="ปล่อยว่างหากยังไม่ระบุ"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+
+          <!-- Priority & Status Row -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">ระดับความสำคัญ</label>
+              <select id="form-priority" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+                <option value="Low">Low (ต่ำ)</option>
+                <option value="Medium" selected>Medium (ปานกลาง)</option>
+                <option value="High">High (สูง)</option>
+                <option value="Critical">Critical (วิกฤติ)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">สถานะเริ่มต้น</label>
+              <select id="form-status" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+                <option value="Pending" selected>Pending (รอดำเนินการ)</option>
+                <option value="In Progress">In Progress (กำลังทำ)</option>
+                <option value="Completed">Completed (เสร็จสิ้น)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Initial Description / Problem detail -->
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">รายละเอียดปัญหา / งานที่ต้องทำ <span class="text-amber-400">*</span></label>
+            <textarea id="form-desc" rows="3" required placeholder="อธิบายอาการเสีย อาการผิดปกติ หรือรายการเช็คที่ต้องการ"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none"></textarea>
+          </div>
+
+          <!-- Photo attachment -->
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>ถ่ายรูป/แนบภาพสภาพเครื่องจักร (Google Drive)</span>
+              <span class="text-[10px] text-slate-400 font-mono">Optional</span>
+            </label>
+            
+            <div class="flex items-center gap-3">
+              <label class="flex-1 cursor-pointer flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-slate-600 hover:border-amber-500 bg-slate-950/60 text-slate-300 text-xs font-medium transition active:scale-98">
+                <i data-lucide="camera" class="w-4 h-4 text-amber-400"></i>
+                <span id="photo-upload-label">แตะเพื่อถ่ายรูป หรือ เลือกไฟล์</span>
+                <input type="file" id="form-photo-input" accept="image/*" capture="environment" onchange="handlePhotoSelected(event)" class="hidden">
+              </label>
+
+              <!-- Photo Preview Container -->
+              <div id="photo-preview-wrap" class="hidden relative w-12 h-12 rounded-xl overflow-hidden border border-amber-500">
+                <img id="photo-preview-img" src="" alt="Proof" class="w-full h-full object-cover">
+                <button type="button" onclick="clearPhotoSelection()" class="absolute inset-0 bg-slate-950/70 flex items-center justify-center text-red-400 opacity-0 hover:opacity-100 transition">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="pt-2">
+            <button type="submit" id="btn-save-log" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-98 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>ส่งงานเข้าลิสต์ (Dispatch & Save)</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 4: SETTINGS & GOOGLE DRIVE -->
+    <section id="tab-settings" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+            <i data-lucide="hard-drive" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-white">Google Drive & Sheets Integration</h2>
+            <p class="text-[11px] text-slate-400">เชื่อมต่อคลาวด์สองทาง (Sync & Fetch)</p>
+          </div>
+        </div>
+
+        <!-- Engineer Profile -->
+        <div class="space-y-1.5 border-t border-slate-800 pt-3">
+          <label class="block text-xs font-medium text-slate-300">ชื่อวิศวกรผู้ใช้งานปัจจุบัน (Your Name)</label>
+          <input type="text" id="setting-engineer-name" placeholder="เช่น วิศวกร สมศักดิ์ (ENG-01)" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+        </div>
+
+        <!-- Web App Endpoint URL -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-medium text-slate-300">Google Apps Script Web App URL</label>
+          <input type="url" id="setting-gas-url" placeholder="https://script.google.com/macros/s/.../exec" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono">
+          <p class="text-[10px] text-slate-400">รองรับทั้งการดึงงานจาก Google Sheets และอัปเดตงานกลับ</p>
+        </div>
+
+        <div class="flex gap-2">
+          <button onclick="saveSettings()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="check" class="w-4 h-4"></i> บันทึกการตั้งค่า
+          </button>
+          <button onclick="fetchTasksFromGoogleSheets()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-medium border border-slate-700 transition flex items-center gap-1.5">
+            <i data-lucide="cloud-download" class="w-4 h-4"></i> ดึงงานจาก Sheet
+          </button>
+        </div>
+
+        <!-- Unsynced Queue status -->
+        <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-semibold text-white">ข้อมูลค้างส่ง (Pending Sync)</div>
+            <div class="text-[10px] text-slate-400" id="setting-queue-count">มีรายการรอส่ง: 0 รายการ</div>
+          </div>
+          <button onclick="triggerQuickSync()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold active:scale-95 transition flex items-center gap-1">
+            <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Sync ตอนนี้
+          </button>
+        </div>
+      </div>
+
+      <!-- Updated Apps Script Code Box with read/write capability -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+        <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="code" class="w-4 h-4"></i> โค้ด Google Apps Script (Code.gs) ปรับปรุงใหม่
+        </h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          โค้ดนี้รองรับ <b>ทั้งการอ่านรายการงาน (Fetch Task List)</b> และ <b>การเขียน/อัปเดตงาน (Save/Edit)</b> โดยอัตโนมัติ
+        </p>
+
+        <div class="relative mt-2">
+          <pre class="bg-slate-950 p-3 rounded-xl text-[10px] text-slate-300 font-mono overflow-x-auto max-h-52 border border-slate-800" id="gas-script-box">
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("ActionLogs") || ss.insertSheet("ActionLogs");
+    
+    // ตั้งค่าหัวตาราง
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["ID", "Timestamp", "Requester", "Engineer", "Asset ID", "Area", "Category", "Priority", "Status", "Man-Hours", "Description", "Resolution", "Drive Photo URL"]);
+      sheet.getRange(1, 1, 1, 13).setFontWeight("bold").setBackground("#f1f5f9");
+    }
+
+    var photoUrl = data.drivePhotoUrl || "-";
+    if (data.photoBase64) {
+      var folderName = "Engineer_Tracker_Photos";
+      var folders = DriveApp.getFoldersByName(folderName);
+      var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+      
+      var imageBlob = Utilities.newBlob(Utilities.base64Decode(data.photoBase64), "image/jpeg", "IMG_" + data.assetId + "_" + Date.now() + ".jpg");
+      var file = folder.createFile(imageBlob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      photoUrl = file.getUrl();
+    }
+
+    var values = sheet.getDataRange().getValues();
+    var targetRow = -1;
+    for (var i = 1; i < values.length; i++) {
+      if (values[i][0] == data.id) {
+        targetRow = i + 1;
+        break;
+      }
+    }
+
+    var rowData = [
+      data.id || Utilities.getUuid(),
+      data.timestamp || new Date().toLocaleString("th-TH"),
+      data.requester || "Unassigned",
+      data.engineer || "Unassigned",
+      data.assetId,
+      data.area,
+      data.category,
+      data.priority,
+      data.status,
+      data.manHours || 0,
+      data.description,
+      data.resolution || "",
+      photoUrl
+    ];
+
+    if (targetRow > 0) {
+      sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
+    } else {
+      sheet.appendRow(rowData);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      id: data.id,
+      drivePhotoUrl: photoUrl
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("ActionLogs");
+    if (!sheet || sheet.getLastRow() <= 1) {
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", tasks: [] })).setMimeType(ContentService.MimeType.JSON);
+    }
+    var values = sheet.getDataRange().getValues();
+    var tasks = [];
+    for (var i = 1; i < values.length; i++) {
+      var r = values[i];
+      tasks.push({
+        id: String(r[0]),
+        timestamp: String(r[1]),
+        requester: String(r[2] || ""),
+        engineer: String(r[3] || ""),
+        assetId: String(r[4] || ""),
+        area: String(r[5] || ""),
+        category: String(r[6] || "Corrective"),
+        priority: String(r[7] || "Medium"),
+        status: String(r[8] || "Pending"),
+        manHours: parseFloat(r[9]) || 0,
+        description: String(r[10] || ""),
+        resolution: String(r[11] || ""),
+        drivePhotoUrl: String(r[12] || ""),
+        synced: true
+      });
+    }
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", tasks: tasks })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+          </pre>
+          <button onclick="copyGasScript()" class="absolute right-2 top-2 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 text-[11px] font-medium flex items-center gap-1 active:scale-95 transition">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i> คัดลอกโค้ด
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: ENGINEER EDIT & ACTION RESOLUTION MODAL -->
+  <div id="modal-task-action" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-200">
+      
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+            <i data-lucide="wrench" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span id="modal-asset-id">CNC-01</span>
+              <span id="modal-status-badge" class="text-[10px] px-2 py-0.5 rounded-full font-semibold">Status</span>
+            </h3>
+            <p class="text-[10px] text-slate-400" id="modal-area-name">Area Line 1</p>
+          </div>
+        </div>
+        <button onclick="closeTaskModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-4 overflow-y-auto space-y-4 custom-scrollbar text-xs">
+        
+        <!-- Task Info Card -->
+        <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex justify-between items-center text-[11px] text-slate-400">
+            <span>ผู้แจ้ง: <b class="text-white" id="modal-requester">-</b></span>
+            <span>ความสำคัญ: <b id="modal-priority-text" class="text-amber-400">-</b></span>
+          </div>
+          <div class="text-slate-300 text-xs leading-relaxed" id="modal-description">-</div>
+          <div id="modal-photo-link-wrap" class="hidden pt-1">
+            <a id="modal-photo-link" href="#" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:underline bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i> ดูรูปภาพหน้างานบน Google Drive
+            </a>
+          </div>
+        </div>
+
+        <!-- Quick Start Work Timer for this task -->
+        <div class="flex gap-2">
+          <button onclick="bindTimerToModalTask()" class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 font-semibold flex items-center justify-center gap-1.5">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i> เริ่มจับเวลาที่งานนี้
+          </button>
+          <button onclick="claimCurrentTask()" class="py-2 px-3 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 font-semibold flex items-center gap-1">
+            <i data-lucide="user-check" class="w-3.5 h-3.5"></i> รับงานนี้เอง
+          </button>
+        </div>
+
+        <!-- Engineer Update Form -->
+        <form id="modal-edit-form" onsubmit="handleModalSave(event)" class="space-y-3 pt-2 border-t border-slate-800">
+          <input type="hidden" id="modal-task-id">
+
+          <!-- Engineer Assignee & Status Update -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] font-medium text-slate-300 mb-1">วิศวกรผู้รับผิดชอบ</label>
+              <input type="text" id="modal-engineer" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-slate-300 mb-1">ปรับสถานะงาน</label>
+              <select id="modal-status" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                <option value="Pending">Pending (รอดำเนินการ)</option>
+                <option value="In Progress">In Progress (กำลังทำ)</option>
+                <option value="Completed">Completed (เสร็จสิ้น)</option>
+                <option value="Pending Parts">Pending Parts (รออะไหล่)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Man Hours -->
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-[11px] font-medium text-slate-300">ชั่วโมงทำงานสะสม (Man-Hours)</label>
+              <button type="button" onclick="fillModalFromTimer()" class="text-[10px] text-amber-400 hover:underline flex items-center gap-1 font-mono">
+                <i data-lucide="timer" class="w-3 h-3"></i> ดึงจาก Live Timer
+              </button>
+            </div>
+            <input type="number" step="0.1" min="0" id="modal-hours" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-amber-500">
+          </div>
+
+          <!-- Resolution & Notes -->
+          <div>
+            <label class="block text-[11px] font-medium text-slate-300 mb-1">บันทึกผลการปฏิบัติงาน / อะไหล่ที่เปลี่ยน (Action / Resolution)</label>
+            <textarea id="modal-resolution" rows="3" placeholder="ระบุวิธีการแก้ไข อะไหล่ และข้อแนะนำ เพื่อปิดงาน"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none"></textarea>
+          </div>
+
+          <!-- Photo Update -->
+          <div>
+            <label class="block text-[11px] font-medium text-slate-300 mb-1">แนบรูปถ่ายการแก้ไขเสร็จสิ้น (ถ้ามี)</label>
+            <input type="file" id="modal-photo-input" accept="image/*" capture="environment" onchange="handleModalPhotoSelected(event)" class="text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[11px] file:bg-slate-800 file:text-amber-400">
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow">
+              <i data-lucide="save" class="w-4 h-4"></i> บันทึก & อัปเดตงาน (Save & Sync)
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 pb-safe shadow-2xl">
+    <div class="max-w-md mx-auto grid grid-cols-4 px-2 py-1.5">
+      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex flex-col items-center justify-center py-1.5 text-amber-400 font-medium">
+        <i data-lucide="layout-dashboard" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px]">สรุปงาน</span>
+      </button>
+
+      <button onclick="switchTab('tasks')" id="nav-tasks" class="nav-btn flex flex-col items-center justify-center py-1.5 text-slate-400 hover:text-slate-200 relative">
+        <i data-lucide="list-todo" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px]">รายการงาน</span>
+        <span id="nav-tasks-badge" class="hidden absolute top-1 right-6 w-2 h-2 rounded-full bg-amber-500"></span>
+      </button>
+
+      <button onclick="switchTab('new')" id="nav-new" class="nav-btn flex flex-col items-center justify-center py-1.5 text-slate-400 hover:text-slate-200">
+        <div class="relative">
+          <i data-lucide="plus-circle" class="w-5 h-5 mb-0.5"></i>
+        </div>
+        <span class="text-[10px]">มอบหมายงาน</span>
+      </button>
+
+      <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center justify-center py-1.5 text-slate-400 hover:text-slate-200">
+        <i data-lucide="settings" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px]">G-Drive</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-4">
+    <div class="bg-slate-800 border border-slate-700 text-white px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-medium">
+      <span id="toast-icon"><i data-lucide="info" class="w-4 h-4 text-amber-400"></i></span>
+      <span id="toast-msg">ข้อความแจ้งเตือน</span>
+    </div>
+  </div>
+
+  <script>
+    // App State
+    let tasks = [];
+    let pendingQueue = [];
+    let currentPhotoBase64 = null;
+    let modalPhotoBase64 = null;
+    let taskFilter = 'ALL';
+    let activeTaskForTimer = null;
+    
+    // Live Timer State
+    let timerInterval = null;
+    let timerSeconds = 0;
+    let timerRunning = false;
+
+    // Config Keys
+    const CONFIG_KEY = 'ENG_TRACKER_CONFIG';
+    const TASKS_KEY = 'ENG_TRACKER_TASKS';
+    const QUEUE_KEY = 'ENG_TRACKER_QUEUE';
+
+    let config = {
+      engineerName: 'สมศักดิ์ (ENG-01)',
+      gasUrl: ''
+    };
+
+    window.onload = function() {
+      loadSavedData();
+      renderAllViews();
+      lucide.createIcons();
+
+      window.addEventListener('online', () => updateSyncStatusUI());
+      window.addEventListener('offline', () => updateSyncStatusUI());
+      updateSyncStatusUI();
+    };
+
+    function loadSavedData() {
+      try {
+        const savedConfig = localStorage.getItem(CONFIG_KEY);
+        if (savedConfig) config = JSON.parse(savedConfig);
+        
+        const savedTasks = localStorage.getItem(TASKS_KEY);
+        if (savedTasks) tasks = JSON.parse(savedTasks);
+
+        const savedQueue = localStorage.getItem(QUEUE_KEY);
+        if (savedQueue) pendingQueue = JSON.parse(savedQueue);
+
+        document.getElementById('setting-engineer-name').value = config.engineerName || '';
+        document.getElementById('setting-gas-url').value = config.gasUrl || '';
+        document.getElementById('current-engineer-tag').textContent = 'ENG: ' + (config.engineerName || 'Unassigned');
+
+        // Sample initial dispatch task list if empty
+        if (tasks.length === 0) {
+          tasks = [
+            {
+              id: 'TSK-101',
+              timestamp: new Date(Date.now() - 3600000 * 3).toLocaleString('th-TH'),
+              requester: 'หัวหน้ากะเช้า',
+              engineer: config.engineerName,
+              assetId: 'ROBOT-ARM-01',
+              area: 'Line 2 Welding',
+              category: 'Corrective',
+              priority: 'High',
+              status: 'In Progress',
+              manHours: 1.0,
+              description: 'หุ่นยนต์เชื่อมมีสัญญาณเตือน Alarm 402 Servo Overload มอเตอร์แกนที่ 3 มีเสียงดังผิดปกติ',
+              resolution: 'เบื้องต้นตรวจสอบสายไฟพบขั้วต่อหลวม กำลังขันยึดและวัดค่ากระแสไฟฟ้า',
+              synced: true,
+              drivePhotoUrl: ''
+            },
+            {
+              id: 'TSK-102',
+              timestamp: new Date(Date.now() - 3600000 * 6).toLocaleString('th-TH'),
+              requester: 'ฝ่ายผลิต 1',
+              engineer: '',
+              assetId: 'AIR-COMP-B',
+              area: 'Utility Building',
+              category: 'Preventive',
+              priority: 'Medium',
+              status: 'Pending',
+              manHours: 0,
+              description: 'ถึงรอบตรวจเช็ครายสัปดาห์: ตรวจสอบระดับน้ำมันหล่อลื่นและถ่ายน้ำทิ้งจากถังพักลม',
+              resolution: '',
+              synced: true,
+              drivePhotoUrl: ''
+            },
+            {
+              id: 'TSK-103',
+              timestamp: new Date(Date.now() - 3600000 * 24).toLocaleString('th-TH'),
+              requester: 'QC Line',
+              engineer: config.engineerName,
+              assetId: 'OVEN-CONVEYOR',
+              area: 'Paint Shop',
+              category: 'Inspection',
+              priority: 'Low',
+              status: 'Completed',
+              manHours: 2.5,
+              description: 'สอบเทียบเซนเซอร์วัดอุณหภูมิในตู้อบ 4 จุดตามมาตรฐานรอบเดือน',
+              resolution: 'ปรับจูนเซนเซอร์ชุดที่ 2 ชดเชยอุณหภูมิ +1.5C ทำงานผ่านเกณฑ์แล้ว',
+              synced: true,
+              drivePhotoUrl: ''
+            }
+          ];
+          saveTasksToStorage();
+        }
+      } catch (e) {
+        console.error('Storage load error:', e);
+      }
+    }
+
+    function saveTasksToStorage() {
+      localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(pendingQueue));
+    }
+
+    function switchTab(tabId) {
+      const tabs = ['dashboard', 'tasks', 'new', 'settings'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${t}`);
+        navBtn.classList.remove('text-amber-400');
+        navBtn.classList.add('text-slate-400');
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      activeNav.classList.remove('text-slate-400');
+      activeNav.classList.add('text-amber-400');
+
+      if (tabId === 'dashboard') updateDashboardMetrics();
+      if (tabId === 'tasks') renderTaskList();
+      if (tabId === 'settings') updateSettingsView();
+
+      lucide.createIcons();
+    }
+
+    function openNewTaskForm(category) {
+      switchTab('new');
+      if (category) {
+        document.getElementById('form-category').value = category;
+        if (category === 'Emergency') {
+          document.getElementById('form-priority').value = 'Critical';
+        }
+      }
+      document.getElementById('form-engineer').value = config.engineerName || '';
+    }
+
+    // TIMER LOGIC
+    function toggleTimer() {
+      const btnText = document.getElementById('timer-btn-text');
+      const ind = document.getElementById('timer-indicator');
+      const note = document.getElementById('timer-note');
+
+      if (!timerRunning) {
+        timerRunning = true;
+        btnText.textContent = 'หยุดชั่วคราว';
+        ind.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 pulsing';
+        note.textContent = activeTaskForTimer ? `กำลังจับเวลางาน: ${activeTaskForTimer.assetId}` : 'กำลังบันทึกเวลาทำงาน...';
+        
+        timerInterval = setInterval(() => {
+          timerSeconds++;
+          renderTimerDisplay();
+        }, 1000);
+      } else {
+        timerRunning = false;
+        clearInterval(timerInterval);
+        btnText.textContent = 'ทำต่อ';
+        ind.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+        note.textContent = 'หยุดเวลาชั่วคราว';
+      }
+      lucide.createIcons();
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timerRunning = false;
+      timerSeconds = 0;
+      activeTaskForTimer = null;
+      renderTimerDisplay();
+      document.getElementById('timer-btn-text').textContent = 'เริ่มจับเวลา';
+      document.getElementById('timer-indicator').className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+      document.getElementById('timer-note').textContent = 'กดเริ่มเพื่อจับเวลาการปฏิบัติงาน';
+      document.getElementById('timer-active-machine').textContent = 'No Task Active';
+      lucide.createIcons();
+    }
+
+    function renderTimerDisplay() {
+      const h = Math.floor(timerSeconds / 3600);
+      const m = Math.floor((timerSeconds % 3600) / 60);
+      const s = timerSeconds % 60;
+      document.getElementById('timer-display').textContent = 
+        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function bindTimerToModalTask() {
+      const taskId = document.getElementById('modal-task-id').value;
+      const target = tasks.find(t => t.id === taskId);
+      if (!target) return;
+
+      activeTaskForTimer = target;
+      document.getElementById('timer-active-machine').textContent = target.assetId;
+      closeTaskModal();
+      switchTab('dashboard');
+      if (!timerRunning) toggleTimer();
+      showToast(`ผูกเวลากับงาน ${target.assetId} เรียบร้อยแล้ว`);
+    }
+
+    function fillModalFromTimer() {
+      const hoursDecimal = Math.max(0.1, parseFloat((timerSeconds / 3600).toFixed(1)));
+      const currentVal = parseFloat(document.getElementById('modal-hours').value) || 0;
+      document.getElementById('modal-hours').value = (currentVal + hoursDecimal).toFixed(1);
+      showToast(`บวกเวลาจาก Timer ${hoursDecimal}h เรียบร้อย`);
+    }
+
+    // PHOTO HANDLERS
+    function handlePhotoSelected(event) {
+      compressImage(event.target.files[0], (base64) => {
+        currentPhotoBase64 = base64;
+        document.getElementById('photo-preview-img').src = 'data:image/jpeg;base64,' + base64;
+        document.getElementById('photo-preview-wrap').classList.remove('hidden');
+        document.getElementById('photo-upload-label').textContent = 'เปลี่ยนรูปถ่าย';
+        showToast('แนบภาพสภาพเครื่องจักรพร้อมส่ง');
+      });
+    }
+
+    function handleModalPhotoSelected(event) {
+      compressImage(event.target.files[0], (base64) => {
+        modalPhotoBase64 = base64;
+        showToast('แนบภาพการซ่อมเรียบร้อย');
+      });
+    }
+
+    function compressImage(file, callback) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const maxDim = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          callback(dataUrl.split(',')[1]);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearPhotoSelection() {
+      currentPhotoBase64 = null;
+      document.getElementById('form-photo-input').value = '';
+      document.getElementById('photo-preview-wrap').classList.add('hidden');
+      document.getElementById('photo-upload-label').textContent = 'แตะเพื่อถ่ายรูป หรือ เลือกไฟล์';
+    }
+
+    // SUBMIT DISPATCH TASK (NEW ITEM)
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+
+      const newTask = {
+        id: 'TSK-' + Date.now().toString().slice(-6),
+        timestamp: new Date().toLocaleString('th-TH'),
+        requester: document.getElementById('form-requester').value.trim() || 'แจ้งโดยตรง',
+        engineer: document.getElementById('form-engineer').value.trim() || '',
+        assetId: document.getElementById('form-asset').value.trim(),
+        area: document.getElementById('form-area').value.trim(),
+        category: document.getElementById('form-category').value,
+        priority: document.getElementById('form-priority').value,
+        status: document.getElementById('form-status').value,
+        manHours: 0,
+        description: document.getElementById('form-desc').value.trim(),
+        resolution: '',
+        photoBase64: currentPhotoBase64,
+        synced: false,
+        drivePhotoUrl: ''
+      };
+
+      tasks.unshift(newTask);
+      pendingQueue.push(newTask);
+      saveTasksToStorage();
+
+      document.getElementById('action-form').reset();
+      clearPhotoSelection();
+
+      showToast(`ใส่งาน ${newTask.assetId} เข้าในรายการแล้ว`);
+      syncItemToGoogleDrive(newTask);
+
+      switchTab('tasks');
+    }
+
+    // MODAL EDIT / RESOLUTION
+    function openTaskModal(taskId) {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      document.getElementById('modal-task-id').value = task.id;
+      document.getElementById('modal-asset-id').textContent = task.assetId;
+      document.getElementById('modal-area-name').textContent = `${task.area} • แจ้งเมื่อ ${task.timestamp}`;
+      document.getElementById('modal-requester').textContent = task.requester || 'ไม่ระบุ';
+      document.getElementById('modal-priority-text').textContent = task.priority;
+      document.getElementById('modal-description').textContent = task.description;
+
+      // Status Badge
+      const statusBadge = document.getElementById('modal-status-badge');
+      statusBadge.textContent = task.status;
+      statusBadge.className = `text-[10px] px-2 py-0.5 rounded-full font-semibold ${getStatusStyle(task.status)}`;
+
+      // Edit Form fields
+      document.getElementById('modal-engineer').value = task.engineer || config.engineerName || '';
+      document.getElementById('modal-status').value = task.status;
+      document.getElementById('modal-hours').value = task.manHours || 0;
+      document.getElementById('modal-resolution').value = task.resolution || '';
+      document.getElementById('modal-photo-input').value = '';
+      modalPhotoBase64 = null;
+
+      // Photo Link wrap
+      const photoWrap = document.getElementById('modal-photo-link-wrap');
+      const photoLink = document.getElementById('modal-photo-link');
+      if (task.drivePhotoUrl && task.drivePhotoUrl !== '-') {
+        photoWrap.classList.remove('hidden');
+        photoLink.href = task.drivePhotoUrl;
+      } else {
+        photoWrap.classList.add('hidden');
+      }
+
+      document.getElementById('modal-task-action').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeTaskModal() {
+      document.getElementById('modal-task-action').classList.add('hidden');
+    }
+
+    function claimCurrentTask() {
+      document.getElementById('modal-engineer').value = config.engineerName;
+      document.getElementById('modal-status').value = 'In Progress';
+      showToast('รับงานเข้าคิวของตนเองแล้ว กดบันทึกเพื่อยืนยัน');
+    }
+
+    async function handleModalSave(e) {
+      e.preventDefault();
+      const taskId = document.getElementById('modal-task-id').value;
+      const taskIndex = tasks.findIndex(t => t.id === taskId);
+      if (taskIndex === -1) return;
+
+      const target = tasks[taskIndex];
+      target.engineer = document.getElementById('modal-engineer').value.trim();
+      target.status = document.getElementById('modal-status').value;
+      target.manHours = parseFloat(document.getElementById('modal-hours').value) || 0;
+      target.resolution = document.getElementById('modal-resolution').value.trim();
+      target.synced = false;
+
+      if (modalPhotoBase64) {
+        target.photoBase64 = modalPhotoBase64;
+      }
+
+      // Add to pending queue if not exists
+      const qIdx = pendingQueue.findIndex(q => q.id === target.id);
+      if (qIdx >= 0) pendingQueue[qIdx] = target;
+      else pendingQueue.push(target);
+
+      saveTasksToStorage();
+      closeTaskModal();
+      renderAllViews();
+      showToast('อัปเดตงานและบันทึกสถานะเรียบร้อย');
+
+      await syncItemToGoogleDrive(target);
+    }
+
+    // SYNC FUNCTIONS (GAS INTEGRATION)
+    async function syncItemToGoogleDrive(taskItem) {
+      if (!config.gasUrl || !navigator.onLine) {
+        updateSyncStatusUI();
+        return false;
+      }
+
+      const rotateIcon = document.getElementById('sync-icon-rotate');
+      rotateIcon.classList.add('animate-spin');
+
+      try {
+        const payload = {
+          id: taskItem.id,
+          timestamp: taskItem.timestamp,
+          requester: taskItem.requester,
+          engineer: taskItem.engineer,
+          assetId: taskItem.assetId,
+          area: taskItem.area,
+          category: taskItem.category,
+          priority: taskItem.priority,
+          status: taskItem.status,
+          manHours: taskItem.manHours,
+          description: taskItem.description,
+          resolution: taskItem.resolution || '',
+          drivePhotoUrl: taskItem.drivePhotoUrl || '',
+          photoBase64: taskItem.photoBase64 || null
+        };
+
+        await fetch(config.gasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        taskItem.synced = true;
+        delete taskItem.photoBase64;
+        pendingQueue = pendingQueue.filter(q => q.id !== taskItem.id);
+        saveTasksToStorage();
+
+        rotateIcon.classList.remove('animate-spin');
+        renderAllViews();
+        return true;
+      } catch (err) {
+        console.error('GAS sync error:', err);
+        rotateIcon.classList.remove('animate-spin');
+        updateSyncStatusUI();
+        return false;
+      }
+    }
+
+    async function triggerQuickSync() {
+      if (pendingQueue.length === 0) {
+        showToast('ข้อมูลทั้งหมดเชื่อมต่อและตรงกับคลาวด์แล้ว');
+        return;
+      }
+      if (!config.gasUrl) {
+        showToast('โปรดตั้งค่า Web App URL ในแท็บ G-Drive ก่อน');
+        switchTab('settings');
+        return;
+      }
+
+      showToast(`กำลัง Sync ${pendingQueue.length} รายการขึ้น Google Drive/Sheets...`);
+      for (const item of [...pendingQueue]) {
+        await syncItemToGoogleDrive(item);
+      }
+      showToast('Sync ครบถ้วนแล้ว');
+    }
+
+    async function fetchTasksFromGoogleSheets() {
+      const url = document.getElementById('setting-gas-url').value.trim();
+      if (!url) {
+        showToast('กรุณาระบุ URL ก่อน');
+        return;
+      }
+      showToast('กำลังโหลดรายการงานจาก Google Sheets...');
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.status === 'success' && Array.isArray(data.tasks)) {
+          // Merge tasks: keep newer or non-existing
+          data.tasks.forEach(remoteTask => {
+            const localIdx = tasks.findIndex(t => t.id === remoteTask.id);
+            if (localIdx === -1) {
+              tasks.push(remoteTask);
+            } else if (tasks[localIdx].synced) {
+              tasks[localIdx] = remoteTask;
+            }
+          });
+          saveTasksToStorage();
+          renderAllViews();
+          showToast(`โหลดสำเร็จ! มีทั้งหมด ${tasks.length} รายการ`);
+        } else {
+          showToast('ไม่พบรายการงานจาก Sheet');
+        }
+      } catch (e) {
+        console.error('Fetch tasks failed:', e);
+        showToast('ไม่สามารถดึงข้อมูลได้ (ตรวจดู URL หรือสิทธิ์ Anyone)');
+      }
+    }
+
+    // VIEW RENDERING
+    function updateDashboardMetrics() {
+      const totalHours = tasks.reduce((acc, t) => acc + (parseFloat(t.manHours) || 0), 0);
+      document.getElementById('dash-manhours').innerHTML = `${totalHours.toFixed(1)} <span class="text-xs text-slate-400 font-normal">hrs</span>`;
+      document.getElementById('dash-total-tasks').textContent = tasks.length;
+      
+      const pendingCount = tasks.filter(t => t.status !== 'Completed').length;
+      document.getElementById('dash-pending-tasks').textContent = pendingCount;
+
+      // Pending/Action Queue on dashboard
+      const queueContainer = document.getElementById('dash-action-queue');
+      const activeQueue = tasks.filter(t => t.status !== 'Completed').slice(0, 3);
+
+      if (activeQueue.length === 0) {
+        queueContainer.innerHTML = `<div class="p-6 text-center text-xs text-slate-500 bg-slate-900 rounded-2xl border border-slate-800">ไม่มีงานค้าง ยอดเยี่ยมมาก!</div>`;
+        return;
+      }
+
+      queueContainer.innerHTML = activeQueue.map(item => createTaskCard(item)).join('');
+      lucide.createIcons();
+    }
+
+    function renderTaskList() {
+      const container = document.getElementById('task-items-container');
+      const query = (document.getElementById('search-tasks').value || '').toLowerCase();
+
+      const filtered = tasks.filter(item => {
+        const matchText = (item.assetId || '').toLowerCase().includes(query) ||
+                          (item.engineer || '').toLowerCase().includes(query) ||
+                          (item.description || '').toLowerCase().includes(query) ||
+                          (item.area || '').toLowerCase().includes(query);
+        if (!matchText) return false;
+
+        if (taskFilter === 'ALL') return true;
+        if (taskFilter === 'MY') {
+          return item.engineer && item.engineer.toLowerCase().includes((config.engineerName || '').toLowerCase());
+        }
+        return item.status === taskFilter;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-xs text-slate-500 bg-slate-900 rounded-2xl border border-slate-800">ไม่พบงานที่ค้นหา</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => createTaskCard(item)).join('');
+      lucide.createIcons();
+    }
+
+    function createTaskCard(item) {
+      const priorityBadge = {
+        'Low': 'bg-slate-800 text-slate-300 border-slate-700',
+        'Medium': 'bg-blue-950/60 text-blue-300 border-blue-800/40',
+        'High': 'bg-amber-950/60 text-amber-300 border-amber-800/40',
+        'Critical': 'bg-red-950/60 text-red-300 border-red-800/40'
+      }[item.priority] || 'bg-slate-800 text-slate-300';
+
+      const statusStyle = getStatusStyle(item.status);
+
+      return `
+        <div onclick="openTaskModal('${item.id}')" class="bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-3.5 space-y-2.5 transition active:scale-[0.99] cursor-pointer shadow">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">${escapeHtml(item.assetId)}</span>
+              <span class="text-[11px] text-slate-400 truncate max-w-[150px]">${escapeHtml(item.area)}</span>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${statusStyle}">${item.status}</span>
+          </div>
+
+          <p class="text-xs text-slate-200 line-clamp-2 leading-relaxed">${escapeHtml(item.description)}</p>
+
+          ${item.resolution ? `<div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800/60 text-[11px] text-emerald-300 line-clamp-1"><span class="text-slate-400">แก้ไข:</span> ${escapeHtml(item.resolution)}</div>` : ''}
+
+          <div class="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[11px] text-slate-400">
+            <div class="flex items-center gap-1.5">
+              <span class="px-1.5 py-0.5 rounded border text-[10px] ${priorityBadge}">${item.priority}</span>
+              <span class="text-slate-300 truncate max-w-[120px]"><i data-lucide="user" class="w-3 h-3 inline mr-0.5"></i>${escapeHtml(item.engineer || 'ยังไม่มอบหมาย')}</span>
+            </div>
+            <div class="flex items-center gap-2 font-mono">
+              <span>${item.manHours || 0}h</span>
+              ${item.synced 
+                ? '<i data-lucide="cloud" class="w-3.5 h-3.5 text-emerald-400"></i>' 
+                : '<i data-lucide="cloud-off" class="w-3.5 h-3.5 text-amber-400"></i>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getStatusStyle(status) {
+      switch(status) {
+        case 'Completed': return 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/60';
+        case 'In Progress': return 'bg-blue-950/80 text-blue-300 border border-blue-800/60';
+        case 'Pending Parts': return 'bg-purple-950/80 text-purple-300 border border-purple-800/60';
+        default: return 'bg-amber-950/80 text-amber-300 border border-amber-800/60';
+      }
+    }
+
+    function setTaskFilter(f) {
+      taskFilter = f;
+      document.querySelectorAll('.task-filter-btn').forEach(btn => {
+        if (btn.dataset.filter === f) {
+          btn.className = 'task-filter-btn px-3 py-1 rounded-lg bg-amber-500 text-slate-950 font-semibold text-[11px] whitespace-nowrap';
+        } else {
+          btn.className = 'task-filter-btn px-3 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] whitespace-nowrap';
+        }
+      });
+      renderTaskList();
+    }
+
+    function saveSettings() {
+      config.engineerName = document.getElementById('setting-engineer-name').value.trim() || 'Anonymous Engineer';
+      config.gasUrl = document.getElementById('setting-gas-url').value.trim();
+
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+      document.getElementById('current-engineer-tag').textContent = 'ENG: ' + config.engineerName;
+
+      updateSyncStatusUI();
+      showToast('บันทึกการตั้งค่า Google Apps Script เรียบร้อย');
+    }
+
+    function updateSettingsView() {
+      document.getElementById('setting-queue-count').textContent = `มีรายการรอส่ง: ${pendingQueue.length} รายการ`;
+    }
+
+    function updateSyncStatusUI() {
+      const dot = document.getElementById('sync-dot');
+      const text = document.getElementById('sync-text');
+      const badge = document.getElementById('nav-tasks-badge');
+
+      const unassignedOrPending = tasks.filter(t => t.status === 'Pending').length;
+      if (unassignedOrPending > 0) {
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+
+      if (!navigator.onLine) {
+        dot.className = 'w-2 h-2 rounded-full bg-red-500';
+        text.textContent = 'Offline';
+        return;
+      }
+      if (!config.gasUrl) {
+        dot.className = 'w-2 h-2 rounded-full bg-slate-400';
+        text.textContent = 'Local';
+        return;
+      }
+      if (pendingQueue.length > 0) {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        text.textContent = `Pending (${pendingQueue.length})`;
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        text.textContent = 'Drive Sync';
+      }
+    }
+
+    function copyGasScript() {
+      const text = document.getElementById('gas-script-box').innerText;
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('คัดลอกโค้ด Google Apps Script แล้ว');
+    }
+
+    function openQrScannerMock() {
+      const mockIds = ['ROBOT-KUKA-01', 'CNC-HAAS-VF2', 'BOILER-STEAM-03', 'PUMP-COOLANT-B'];
+      const pick = mockIds[Math.floor(Math.random() * mockIds.length)];
+      document.getElementById('form-asset').value = pick;
+      showToast(`สแกน QR Code เครื่องจักร: ${pick}`);
+    }
+
+    function renderAllViews() {
+      updateDashboardMetrics();
+      renderTaskList();
+      updateSettingsView();
+      updateSyncStatusUI();
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const msg = document.getElementById('toast-msg');
+      msg.textContent = message;
+
+      toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-4');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
+      }, 2500);
+    }
+
+    function escapeHtml(string) {
+      if (!string) return '';
+      return String(string)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
